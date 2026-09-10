@@ -1,0 +1,33 @@
+Corridas - Suma de Riemann paralela (OpenMP)
+Maquina: Apple M4 Pro, 12 nucleos (8P+4E)
+Compilador: clang + libomp | n = 10^9 rectangulos | intervalo [0, pi]
+Fecha: 2026-09-09
+========================================================
+
+$ ./suma_omp 0 3.141592653589793 1
+Integracion Numerica (Suma de Riemann) - PARALELO OpenMP
+Hilos utilizados      = 1
+Area total aproximada = 12.335425544595667
+Rectangulos           = 1000000000
+Tiempo de ejecucion   = 2.047350 segundos (wall time)
+
+$ ./suma_omp 0 3.141592653589793 4
+Integracion Numerica (Suma de Riemann) - PARALELO OpenMP
+Hilos utilizados      = 4
+Area total aproximada = 12.335425544596276
+Rectangulos           = 1000000000
+Tiempo de ejecucion   = 0.594062 segundos (wall time)
+
+$ ./suma_omp 0 3.141592653589793 8
+Integracion Numerica (Suma de Riemann) - PARALELO OpenMP
+Hilos utilizados      = 8
+Area total aproximada = 12.335425544596465
+Rectangulos           = 1000000000
+Tiempo de ejecucion   = 0.311146 segundos (wall time)
+
+$ ./suma_omp 0 3.141592653589793 12
+Integracion Numerica (Suma de Riemann) - PARALELO OpenMP
+Hilos utilizados      = 12
+Area total aproximada = 12.335425544596564
+Rectangulos           = 1000000000
+Tiempo de ejecucion   = 0.276347 segundos (wall time)
