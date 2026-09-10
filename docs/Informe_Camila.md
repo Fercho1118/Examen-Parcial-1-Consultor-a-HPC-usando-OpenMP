@@ -181,9 +181,6 @@ el beneficio adicional del paralelismo.
 
 ### Evidencia de ejecución
 
-> **PENDIENTE:** insertar las capturas o evidencia de las corridas
-> utilizadas en la tabla anterior.
-
 Sugerencia de evidencias:
 
 -   Ejecución secuencial con $N=20,000$.
@@ -196,7 +193,7 @@ Sugerencia de evidencias:
 Ejemplo de sintaxis:
 
 ``` markdown
-![Evidencia](imagenes/histograma_camila.png)
+![Evidencia](../images/histograma_camila.png)
 ```
 
 ------------------------------------------------------------------------
@@ -305,9 +302,6 @@ una eficiencia de 86.1%.
 
 ### Evidencia de ejecución
 
-> **PENDIENTE:** insertar screenshot o video de las corridas que
-> respaldan las mediciones anteriores.
-
 Sugerencia de evidencias:
 
 -   Suma de Riemann con 1 hilo.
@@ -319,7 +313,7 @@ Sugerencia de evidencias:
 Ejemplo:
 
 ``` markdown
-![Evidencia](imagenes/suma_camila.png)
+![Evidencia](../images/suma_camila.png)
 ```
 
 ------------------------------------------------------------------------
@@ -346,7 +340,4 @@ problema. Las decisiones tomadas permitieron mejorar el rendimiento,
 pero las mediciones también muestran que agregar hilos indefinidamente
 no garantiza una mejora proporcional.
 
-## 4. Evidencia individual requerida
-
-> **PENDIENTE DE COMPLETAR ANTES DE ENTREGAR.**
 
