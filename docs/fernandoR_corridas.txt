@@ -1,33 +1,36 @@
-Corridas - Suma de Riemann paralela (OpenMP)
-Maquina: Apple M4 Pro, 12 nucleos (8P+4E)
-Compilador: clang + libomp | n = 10^9 rectangulos | intervalo [0, pi]
-Fecha: 2026-09-09
-========================================================
+Corridas - Fernando Rueda (23748)
+Maquina: Apple M4 Pro, 12 nucleos (8P + 4E)
+Compilador: clang + libomp, -O2
+==========================================================
 
-$ ./suma_omp 0 3.141592653589793 1
-Integracion Numerica (Suma de Riemann) - PARALELO OpenMP
-Hilos utilizados      = 1
-Area total aproximada = 12.335425544595667
-Rectangulos           = 1000000000
-Tiempo de ejecucion   = 2.047350 segundos (wall time)
+### SUMA DE RIEMANN (n = 10^9, intervalo [0, pi]) ###
+Comando: bash docs/bench_suma.sh   (mejor de 3 corridas por config)
+Evidencia visual: fernandoR_evidencia_suma.png
 
-$ ./suma_omp 0 3.141592653589793 4
-Integracion Numerica (Suma de Riemann) - PARALELO OpenMP
-Hilos utilizados      = 4
-Area total aproximada = 12.335425544596276
-Rectangulos           = 1000000000
-Tiempo de ejecucion   = 0.594062 segundos (wall time)
+hilos   tiempo(s)   speedup   eficiencia(%)
+1       2.0979      1.00      100.0
+2       1.1754      1.78       89.2
+4       0.6090      3.44       86.1
+8       0.3054      6.87       85.9
+12      0.2555      8.21       68.4
 
-$ ./suma_omp 0 3.141592653589793 8
-Integracion Numerica (Suma de Riemann) - PARALELO OpenMP
-Hilos utilizados      = 8
-Area total aproximada = 12.335425544596465
-Rectangulos           = 1000000000
-Tiempo de ejecucion   = 0.311146 segundos (wall time)
+Correctitud - el area se mantiene ~12.3354255445 (solo cambian los ultimos
+digitos por el orden de suma en la reduccion, algo normal en punto flotante):
+  1 hilo   -> 12.335425544595667
+  8 hilos  -> 12.335425544596465
+  12 hilos -> 12.335425544596564
 
-$ ./suma_omp 0 3.141592653589793 12
-Integracion Numerica (Suma de Riemann) - PARALELO OpenMP
-Hilos utilizados      = 12
-Area total aproximada = 12.335425544596564
-Rectangulos           = 1000000000
-Tiempo de ejecucion   = 0.276347 segundos (wall time)
+### HISTOGRAMA (N = 10^6, tiempo total = merge sort + histograma) ###
+Comando: bash docs/bench_histograma.sh   (mejor de 7 corridas por config)
+Evidencia visual: fernandoR_evidencia_histograma.png
+
+hilos   total(s)    speedup   eficiencia(%)
+1       0.05973     1.00      100.0
+2       0.03207     1.86       93.1
+4       0.02062     2.90       72.4
+8       0.01482     4.03       50.4
+12      0.01250     4.78       39.8
+
+Nota: el histograma por si solo corre en ~2 ms (0.28 ms con 8 hilos), demasiado
+rapido para medir un speedup confiable; por eso se reporta el tiempo total del
+programa, que esta dominado por el merge sort.
