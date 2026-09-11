@@ -1,0 +1,19 @@
+# Binarios compilados (regenerables)
+secuencial/histograma
+secuencial/suma
+paralelo/histograma
+paralelo/suma
+paralelo/suma_omp
+*.o
+*.out
+a.out
+
+# Archivos generados por los programas en tiempo de ejecucion
+*.dat
+*.csv
+histograma_serial.png
+histograma_paralelo.png
+temperaturas_ordenadas_*.csv
+
+# Sistema
+.DS_Store

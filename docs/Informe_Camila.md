@@ -1,31 +1,11 @@
 # Resultados y Métricas
 
-Esta sección presenta las decisiones de paralelización, las mediciones
-de **speedup** y **eficiencia**, y el análisis experimental de los dos
-algoritmos desarrollados: **histograma de temperaturas** y **Suma de
-Riemann**.
+Esta sección presenta las mediciones de **speedup** y **eficiencia**, y
+el análisis experimental de los dos algoritmos desarrollados: **histograma
+de temperaturas** y **Suma de Riemann**. El contexto de los datos y la
+estrategia de paralelización están en el [Informe General](Informe%20General.md).
 
 ## 1. Histograma de temperaturas
-
-### Decisiones de paralelización
-
-Para la versión paralela se utilizó OpenMP. Se paralelizaron las dos
-operaciones principales del programa: el ordenamiento mediante **Merge
-Sort** y la construcción del histograma.
-
-En Merge Sort se aprovecharon las dos llamadas recursivas independientes
-correspondientes a las mitades izquierda y derecha del arreglo. Estas se
-implementaron mediante tareas de OpenMP. Para evitar que la creación de
-tareas introdujera un costo excesivo, se estableció un umbral de
-**10,000 elementos**; por debajo de este tamaño, el segmento se procesa
-secuencialmente.
-
-Para el histograma, el arreglo se distribuye entre los hilos y cada hilo
-utiliza un histograma local de **100 cubetas**. Al finalizar, los
-histogramas locales se combinan para producir el histograma global. Esta
-decisión evita que varios hilos incrementen simultáneamente una misma
-posición durante el recorrido principal y reduce el riesgo de
-condiciones de carrera.
 
 ### Metodología de medición
 
@@ -190,46 +170,11 @@ Sugerencia de evidencias:
 -   Ejecución paralela con 8 hilos.
 -   Ejecución paralela con 10 hilos.
 
-Ejemplo de sintaxis:
-
-``` markdown
-![Evidencia](../images/histograma_camila.png)
-```
+![Evidencia de las corridas del histograma](../images/histograma_camila.png)
 
 ------------------------------------------------------------------------
 
 ## 2. Suma de Riemann
-
-### Decisiones de paralelización
-
-El segundo algoritmo corresponde a una integración numérica mediante la
-**Suma de Riemann**. El programa aproxima el área bajo la función:
-
-$$
-f(x) = x^2 + \sin(x)
-$$
-
-utilizando $10^9$ rectángulos.
-
-En la implementación secuencial, cada rectángulo se procesa uno después
-del otro. La principal oportunidad de paralelización está en que el
-cálculo del área de cada rectángulo es independiente de los demás.
-
-La implementación paralela utiliza:
-
-``` c
-#pragma omp parallel for reduction(+:areaTotal) schedule(static)
-```
-
-`parallel for` distribuye las iteraciones entre los hilos. La cláusula
-`reduction(+:areaTotal)` permite que cada hilo acumule una suma parcial
-y que OpenMP combine los resultados al final, evitando una condición de
-carrera sobre `areaTotal`.
-
-Se utilizó `schedule(static)` porque cada iteración realiza
-aproximadamente la misma cantidad de trabajo, por lo que una
-distribución estática permite repartir la carga de manera uniforme con
-un bajo costo de planificación.
 
 ### Metodología de medición
 
@@ -301,20 +246,7 @@ equilibrio entre aceleración y eficiencia**, con un speedup de 3.45 y
 una eficiencia de 86.1%.
 
 ### Evidencia de ejecución
-
-Sugerencia de evidencias:
-
--   Suma de Riemann con 1 hilo.
--   Suma de Riemann con 2 hilos.
--   Suma de Riemann con 4 hilos.
--   Suma de Riemann con 8 hilos.
--   Suma de Riemann con 12 hilos.
-
-Ejemplo:
-
-``` markdown
-![Evidencia](../images/suma_camila.png)
-```
+![Evidencia de las corridas de Suma de Riemann](../images/suma_camila.png)
 
 ------------------------------------------------------------------------
 

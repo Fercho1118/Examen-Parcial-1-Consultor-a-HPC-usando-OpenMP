@@ -4,45 +4,19 @@
 **Máquina de pruebas:** Apple M4 Pro — 12 núcleos (8 de rendimiento + 4 de eficiencia), 24 GB RAM
 **Compilador:** `clang` + `libomp` (OpenMP), optimización `-O2`
 
-Mis mediciones cubren los dos problemas de la consultora: la **Suma de Riemann** (que
-implementé yo) y el **Histograma** (implementado por mi compañero), corriendo ambos en mi
-propia máquina para reportar mi speedup y eficiencia individuales.
+Aquí presento solo mis métricas de los dos problemas, que corrí en mi propia máquina. El contexto
+de los datos y la estrategia de paralelización están en el [Informe General](Informe%20General.md).
 
-En los dos casos el tiempo base **T₁** es el mismo binario paralelo corrido con **1 hilo**,
-para que T₁ y Tₚ se midan exactamente igual. Speedup: **S(p) = T₁ / Tₚ**. Eficiencia:
+En los dos casos tomé como tiempo base **T₁** el mismo programa paralelo corrido con un solo hilo,
+así T₁ y Tₚ se miden igual. El speedup es **S(p) = T₁ / Tₚ** y la eficiencia
 **E(p) = S(p) / p × 100 %**.
 
 ---
 
 # 1. Suma de Riemann
 
-**Tamaño del problema:** n = 10⁹ rectángulos, intervalo [0, π], f(x) = x² + sin(x).
-
-## Qué paralelicé y por qué mejora al secuencial
-
-El secuencial recorre los 10⁹ rectángulos en un solo ciclo acumulando el área
-(`areaTotal += f(xi) * dx`). Ese es el trabajo que reparto entre hilos con una sola directiva:
-
-```c
-#pragma omp parallel for reduction(+:areaTotal) schedule(static)
-```
-
-- **`reduction(+:areaTotal)`** — es el corazón del asunto. Si todos los hilos escribieran
-  directo sobre `areaTotal` tendría una *race condition*. La reducción le da a cada hilo su
-  copia privada, cada uno suma su pedazo, y al final OpenMP junta todo. Descarté
-  `#pragma omp critical` porque serializaría la suma y mataría el speedup.
-- **`schedule(static)`** — todos los rectángulos cuestan igual, así que el reparto en bloques
-  iguales es lo óptimo; un `dynamic` solo agregaría overhead sin beneficio.
-- **`omp_get_wtime()` en vez de `clock()`** — `clock()` suma el tiempo de CPU de todos los
-  núcleos y daría un speedup falso. `omp_get_wtime()` mide tiempo real de pared.
-
-**Correctitud:** el área da 12.33542554459… en todas las corridas; solo cambian los últimos
-dígitos según el número de hilos, por el orden de suma en la reducción. Es normal en punto
-flotante y confirma que resuelvo el mismo problema.
-
-## Resultados
-
-Metodología: mejor de 3 corridas por configuración (`bash docs/bench_suma.sh`).
+Corrí n = 10⁹ rectángulos en el intervalo [0, π] con f(x) = x² + sin(x), tomando el mejor de 3
+tiempos por configuración (`bash docs/bench_suma.sh`).
 
 | Hilos | Tiempo (s) | Speedup (T₁/Tₚ) | Eficiencia |
 |:-----:|:----------:|:---------------:|:----------:|
@@ -52,48 +26,40 @@ Metodología: mejor de 3 corridas por configuración (`bash docs/bench_suma.sh`)
 | 8     | 0.3054     | 6.87×           | 85.9 %     |
 | 12    | 0.2555     | 8.21×           | 68.4 %     |
 
-![Speedup y Eficiencia - Riemann](fernandoR_speedup_eficiencia.png)
+![Speedup y Eficiencia - Riemann](../images/fernandoR_speedup_eficiencia.png)
 
-**Evidencia de corrida** (se ve el comando, mi usuario/máquina y la tabla):
+**Evidencia de corrida** (se ve el comando, mi usuario y la tabla):
 
-![Evidencia Riemann](fernandoR_evidencia_suma.png)
+![Evidencia Riemann](../images/fernandoR_evidencia_suma.png)
 
-## Análisis
+Algo que confirma que todo salió bien es que el área siempre da 12.33542554459…, y solo cambian los
+últimos dígitos según cuántos hilos use. Eso pasa porque la reducción suma los términos en distinto
+orden, algo normal en punto flotante, así que sé que sigo resolviendo el mismo problema.
 
-- **De 1 a 8 hilos el escalamiento es casi lineal**: la eficiencia se queda arriba del 85 % y
-  paso de ~2.1 s a ~0.31 s (**6.9× más rápido**). La paralelización aprovecha casi todo el
-  hardware, justo lo que se espera de un problema grande, uniforme y de reducción pura.
-- **La caída a 12 hilos (68.4 %) es de hardware**: el M4 Pro tiene 8 núcleos de rendimiento y
-  4 de eficiencia (más lentos). Con 12 hilos los últimos 4 caen en los lentos, así que el
-  speedup sigue subiendo (8.21×) pero la eficiencia baja. Es un límite físico, no del código.
-- **Por qué nunca llega a 100 %:** siempre hay costo de crear/sincronizar hilos y de juntar la
-  reducción. Aun así el resultado es sólido: **hasta 8.2× más rápido que el secuencial**.
+### Análisis
+
+De 1 a 8 hilos el escalamiento es casi lineal. La eficiencia se queda arriba del 85 % y el tiempo
+baja de ~2.1 s a ~0.31 s, o sea casi 7 veces más rápido. Se nota que la paralelización aprovecha
+bien el hardware, que es justo lo que uno espera de un problema grande, parejo y de pura suma.
+
+La caída a 12 hilos (68.4 %) no es culpa del código, sino del hardware. El M4 Pro tiene 8 núcleos
+rápidos y 4 de eficiencia más lentos, así que al usar 12 hilos los últimos 4 caen en los lentos. Por
+eso el speedup sigue subiendo hasta 8.21× pero la eficiencia baja. Y nunca llega al 100 % porque
+siempre hay un costo de crear y sincronizar los hilos y de juntar la reducción al final.
+
+Para asegurarme de que de verdad le gano al secuencial y no solo a mi propia corrida de 1 hilo,
+también medí el programa secuencial puro. Me dio 2.19 s, casi lo mismo que mi paralelo con 1 hilo
+(2.10 s), así que comparar contra 1 hilo termina siendo prácticamente comparar contra el secuencial.
+Contra ese secuencial, mi mejor tiempo (0.26 s con 12 hilos) sale 8.6× más rápido, o sea un 88 %
+menos tiempo.
 
 ---
 
 # 2. Histograma
 
-**Tamaño del problema:** N = 10⁶ mediciones (máximo que permite la implementación,
-`#define MAX 1000000`), clasificadas en 100 cubetas.
-
-## Cómo está paralelizado
-
-La versión paralela hace dos cosas antes de reportar: un **merge sort** con tareas y el
-**conteo del histograma**. Las directivas clave son:
-
-- **Merge sort con `#pragma omp task` + `taskwait`** — cada mitad de la recursión se lanza
-  como una tarea que cualquier hilo puede tomar, con un umbral (`UMBRAL 10000`) para no crear
-  tareas de más en segmentos chicos.
-- **Histograma con `histLocal[]` privado por hilo + `#pragma omp critical`** — cada hilo cuenta
-  en su propio arreglo de 100 cubetas (evita la *race condition*) y al final vuelca su conteo
-  al global dentro de un `critical`. Aquí `critical` sí es válido porque solo se ejecuta una
-  vez por hilo (100 sumas), no por elemento.
-
-## Resultados
-
-Metodología: mejor de 7 corridas por configuración (`bash docs/bench_histograma.sh`). Reporto
-el **tiempo total** del programa (merge sort + histograma), porque el histograma por sí solo
-corre en ~2 ms — demasiado rápido para medir un speedup confiable.
+Corrí N = 10⁶ mediciones en 100 cubetas, tomando el mejor de 7 tiempos por configuración
+(`bash docs/bench_histograma.sh`). Reporto el tiempo total del programa (merge sort + histograma)
+porque el histograma solito corre en ~2 ms, demasiado rápido para medir un speedup confiable.
 
 | Hilos | Total (s) | Speedup (T₁/Tₚ) | Eficiencia |
 |:-----:|:---------:|:---------------:|:----------:|
@@ -103,54 +69,42 @@ corre en ~2 ms — demasiado rápido para medir un speedup confiable.
 | 8     | 0.01482   | 4.03×           | 50.4 %     |
 | 12    | 0.01250   | 4.78×           | 39.8 %     |
 
-![Speedup y Eficiencia - Histograma](fernandoR_histograma_speedup.png)
+![Speedup y Eficiencia - Histograma](../images/fernandoR_histograma_speedup.png)
 
-**Evidencia de corrida** (se ve el comando, mi usuario/máquina y la tabla):
+**Evidencia de corrida** (se ve el comando, mi usuario y la tabla):
 
-![Evidencia Histograma](fernandoR_evidencia_histograma.png)
+![Evidencia Histograma](../images/fernandoR_evidencia_histograma.png)
 
-## Análisis
+### Análisis
 
-- **El speedup se aplana rápido** (4.78× con 12 hilos, eficiencia ~40 %), muy distinto a
-  Riemann. Hay tres razones: el trabajo total es chico (~60 ms), así que el costo fijo de crear
-  hilos y tareas pesa mucho más; el merge sort tiene una parte **inherentemente secuencial**
-  (los `Merge` cerca de la raíz del árbol), lo que limita el speedup por la **Ley de Amdahl**;
-  y el `critical` del histograma serializa la combinación final.
-- **El histograma en sí escala bien pero es irrelevante en tiempo:** 2 ms → 0.28 ms. En un
-  problema tan pequeño, el overhead de paralelizar casi se come la ganancia.
+Aquí el speedup se aplana rápido, 4.78× con 12 hilos y una eficiencia de apenas ~40 %, muy distinto
+a Riemann. Le veo tres razones. El trabajo total es pequeño (~60 ms), así que el costo fijo de crear
+los hilos pesa mucho más. El merge sort tiene una parte que va sí o sí en serie (los `Merge` cerca
+de la raíz), y eso limita el speedup por la Ley de Amdahl. Y encima el `critical` del histograma
+serializa la combinación final.
+
+El histograma en sí escala bien, pero es tan rápido que casi da igual, pasa de 2 ms a 0.28 ms. En un
+problema tan pequeño, el overhead de paralelizar casi se come toda la ganancia.
+
+Como en Riemann, comparé también contra el secuencial. El secuencial (0.0597 s) y mi paralelo con 1
+hilo (0.0597 s) salieron casi idénticos, así que el speedup da lo mismo se mida como se mida. Contra
+el secuencial, mi mejor tiempo (0.0125 s con 12 hilos) es 4.8× más rápido, alrededor de 79 % menos
+tiempo.
 
 ---
 
 # Conclusión
 
-El contraste entre los dos problemas es la lección principal: **la Suma de Riemann escala casi
-lineal** (8.2×) porque es un problema grande, de carga uniforme y reducción pura; el
-**histograma se aplana** (4.8×, 40 % de eficiencia) porque es pequeño y tiene partes
-secuenciales. Paralelizar rinde cuando el trabajo es suficientemente grande y regular —
-exactamente el criterio que se espera de una consultora HPC.
+El contraste entre los dos problemas es lo que más me quedó. La Suma de Riemann escala casi lineal
+(8.2×) porque es grande, pareja y de pura suma. El histograma se aplana (4.8× y 40 % de eficiencia)
+porque es chico y tiene partes que van en serie. Al final, paralelizar rinde cuando el trabajo es lo
+bastante grande y regular.
 
 ---
 
 # Cómo reproducir
 
 ```bash
-# Suma de Riemann (speedup + eficiencia)
-bash docs/bench_suma.sh
-
-# Histograma (speedup + eficiencia)
-bash docs/bench_histograma.sh
-```
-
-Compilación manual de cada programa:
-
-```bash
-# macOS (clang + libomp)
-clang -Xpreprocessor -fopenmp -I"$(brew --prefix libomp)/include" \
-      -L"$(brew --prefix libomp)/lib" -lomp -O2 paralelo/suma_omp.c -o suma_omp
-
-# Linux (gcc)
-gcc -fopenmp -O2 paralelo/suma_omp.c -o suma_omp
-
-./suma_omp 0 3.141592653589793 8              # Riemann:  a  b  num_hilos
-echo 1000000 | OMP_NUM_THREADS=8 ./histograma # Histograma: N por stdin, hilos por env
+bash docs/bench_suma.sh          # Suma de Riemann (speedup + eficiencia)
+bash docs/bench_histograma.sh    # Histograma (speedup + eficiencia)
 ```

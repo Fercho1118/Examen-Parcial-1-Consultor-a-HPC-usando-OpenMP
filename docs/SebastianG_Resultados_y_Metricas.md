@@ -17,36 +17,15 @@ $$
 E(p)=\frac{S(p)}{p}\times100\%
 $$
 
-donde $T_s$ es el mejor tiempo secuencial y $T_p$ es el mejor tiempo paralelo con $p$ hilos. Esta metodología compara directamente la solución original con la optimizada. Todas las repeticiones están disponibles en [`sebastian_suma_nueva.txt`](sebastian_suma_nueva.txt) y [`sebastian_histograma_nuevo.txt`](sebastian_histograma_nuevo.txt).
+donde $T_s$ es el mejor tiempo secuencial y $T_p$ es el mejor tiempo paralelo con $p$ hilos. Esta metodología compara directamente la solución original con la optimizada. Todas las repeticiones están disponibles en [`sebastian_suma_nueva.txt`](corridas/sebastian_suma_nueva.txt) y [`sebastian_histograma_nuevo.txt`](corridas/sebastian_histograma_nuevo.txt).
 
 ---
 
 ## 1. Suma de Riemann
 
-### Problema y datos utilizados
+### Metodología
 
-Se aproximó el área bajo la función:
-
-$$
-f(x)=x^2+\sin(x)
-$$
-
-en el intervalo $[0,\pi]$, utilizando $n=10^9$ rectángulos por el método del extremo izquierdo. Las versiones secuencial y paralela emplean los mismos límites, cantidad de rectángulos, función y temporizador de pared (`omp_get_wtime()`). Los puntos se calculan durante la ejecución y no se almacenan en un arreglo, por lo que el uso adicional de memoria es constante, $O(1)$.
-
-Se realizaron tres corridas por configuración y se tomó el menor tiempo. Ambos programas se compilaron con GCC, `-O2`, `-fopenmp` y `-lm` mediante `docs/bench_suma.sh`.
-
-### Estrategia de paralelización
-
-Cada rectángulo puede calcularse de forma independiente. La versión OpenMP utiliza:
-
-```c
-#pragma omp parallel for reduction(+:areaTotal) schedule(static)
-```
-
-- `parallel for` distribuye las $10^9$ iteraciones entre los hilos.
-- `reduction(+:areaTotal)` proporciona un acumulador privado por hilo y combina las sumas parciales al final. Así evita una condición de carrera sobre `areaTotal` sin serializar cada suma.
-- `schedule(static)` es adecuado porque todas las iteraciones realizan prácticamente el mismo trabajo. El reparto anticipado reduce el overhead de planificación.
-- `omp_get_wtime()` mide el tiempo real transcurrido en ambas versiones y permite una comparación consistente.
+Se realizaron tres corridas por configuración y se tomó el menor tiempo. Ambos programas se compilaron con GCC, `-O2`, `-fopenmp` y `-lm` mediante `docs/bench_suma.sh`. El tiempo de referencia es el mejor tiempo del ejecutable secuencial. El contexto de los datos y la estrategia de paralelización están en el [Informe General](Informe%20General.md).
 
 ### Resultados
 
@@ -92,20 +71,9 @@ La variación entre repeticiones, especialmente los 6.156750 s observados en una
 
 ## 2. Histograma de temperaturas y Merge Sort
 
-### Problema y datos utilizados
+### Metodología
 
-Se generaron $N=1,000,000$ temperaturas entre -100 °C y 100 °C, almacenadas en arreglos globales de tipo `float`. Después se ordenaron mediante Merge Sort y se distribuyeron en 100 cubetas. Ambas versiones usan la semilla fija `12345`, por lo que procesan exactamente la misma secuencia de temperaturas.
-
-Se realizaron siete corridas por configuración mediante `docs/bench_histograma.sh` y se tomó el menor tiempo total. La región medida incluye Merge Sort y la construcción del histograma, pero excluye la escritura posterior de CSV, DAT y PNG.
-
-### Estrategia de paralelización
-
-La implementación paralela optimiza las dos etapas principales:
-
-1. **Merge Sort con tareas:** una región `parallel` crea el equipo y `single` inicia una única recursión. Cada mitad independiente se ejecuta mediante `task`; `taskwait` garantiza que ambas mitades terminen antes de combinarlas. El umbral de 10,000 elementos evita crear tareas para segmentos pequeños cuyo overhead superaría el trabajo útil.
-2. **Histograma privado por hilo:** `omp for` reparte las temperaturas y cada hilo incrementa su arreglo local de 100 cubetas. Al terminar, una sección `critical` combina los histogramas locales con el global. La sección crítica ocurre una vez por hilo, no una vez por temperatura, lo cual limita la serialización.
-
-`taskwait` evita combinar arreglos todavía desordenados y `critical` elimina la condición de carrera durante la reducción manual de las cubetas.
+Se realizaron siete corridas por configuración mediante `docs/bench_histograma.sh` y se tomó el menor tiempo total. La región medida incluye Merge Sort y la construcción del histograma, pero excluye la escritura posterior de CSV, DAT y PNG. El tiempo de referencia es el mejor tiempo del ejecutable secuencial.
 
 ### Resultados
 
@@ -165,6 +133,6 @@ Las directivas elegidas evitaron condiciones de carrera sin serializar el trabaj
 ## Reproducción
 
 ```bash
-bash docs/bench_suma.sh | tee docs/sebastian_suma_nueva.txt
-bash docs/bench_histograma.sh | tee docs/sebastian_histograma_nuevo.txt
+bash docs/bench_suma.sh | tee docs/corridas/sebastian_suma_nueva.txt
+bash docs/bench_histograma.sh | tee docs/corridas/sebastian_histograma_nuevo.txt
 ```
