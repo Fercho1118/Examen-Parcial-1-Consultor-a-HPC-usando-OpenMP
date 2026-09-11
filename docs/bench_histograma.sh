@@ -1,46 +1,59 @@
 #!/usr/bin/env bash
-# Benchmark del Histograma paralelo (OpenMP).
-# Mide el tiempo TOTAL del programa (merge sort + histograma) vs numero de hilos
-# y calcula speedup y eficiencia. El histograma por si solo (~2 ms) es demasiado
-# rapido para medirlo de forma confiable, por eso se usa el tiempo total.
-# Uso:  bash docs/bench_histograma.sh
+# Compara Histograma + Merge Sort secuencial contra OpenMP.
+# Uso: bash docs/bench_histograma.sh
 set -e
 
-SRC="paralelo/histograma.c"
-BIN="/tmp/hist_omp_bench"
-N=1000000              # maximo que permite el codigo (#define MAX 1000000)
-HILOS=(1 2 4 8 12)
-REPS=7                 # corridas por config; se toma la mejor
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+SRC_SEQ="$ROOT/secuencial/histograma.c"
+SRC_OMP="$ROOT/paralelo/histograma.c"
+BIN_SEQ="/tmp/hist_serial_bench"
+BIN_OMP="/tmp/hist_omp_bench"
+N=1000000
+HILOS=(1 2 4 8)
+REPS=7
 
-# --- Compilar (Mac con libomp o Linux con gcc) ---
+# Ambos usan omp_get_wtime; la version secuencial no usa directivas OpenMP.
 if command -v gcc >/dev/null && gcc -fopenmp -xc -E - </dev/null >/dev/null 2>&1; then
-  gcc -fopenmp -O2 "$SRC" -o "$BIN"
+  gcc -fopenmp -O2 "$SRC_SEQ" -o "$BIN_SEQ"
+  gcc -fopenmp -O2 "$SRC_OMP" -o "$BIN_OMP"
 else
   BREW=$(brew --prefix libomp)
-  clang -Xpreprocessor -fopenmp -I"$BREW/include" -L"$BREW/lib" -lomp -O2 "$SRC" -o "$BIN"
+  COMMON=(-Xpreprocessor -fopenmp -I"$BREW/include" -L"$BREW/lib" -lomp -O2)
+  clang "${COMMON[@]}" "$SRC_SEQ" -o "$BIN_SEQ"
+  clang "${COMMON[@]}" "$SRC_OMP" -o "$BIN_OMP"
 fi
 
-# El programa genera archivos (csv/dat/png) en el directorio actual:
-# lo corremos en una carpeta temporal para no ensuciar el repo.
+# Los programas generan CSV, DAT y PNG; se ejecutan fuera del repositorio.
 WORK=$(mktemp -d)
 cd "$WORK"
 
-# El numero de hilos se controla con OMP_NUM_THREADS; N se pasa por stdin.
+echo "=== HISTOGRAMA + MERGE SORT: SECUENCIAL ==="
+best_seq=""
+for rep in $(seq "$REPS"); do
+  t=$(echo "$N" | "$BIN_SEQ" 2>/dev/null | grep "Tiempo total" | grep -oE '[0-9]+\.[0-9]+')
+  printf "corrida %-2d %s s\n" "$rep" "$t"
+  if [ -z "$best_seq" ]; then best_seq=$t; else best_seq=$(python3 -c "print(min($best_seq,$t))"); fi
+done
+printf "mejor secuencial: %s s\n\n" "$best_seq"
+
 declare -a T
-echo "hilos  total(s)"
+echo "=== HISTOGRAMA + MERGE SORT: PARALELO OPENMP ==="
 for p in "${HILOS[@]}"; do
   best=""
-  for _ in $(seq "$REPS"); do
-    t=$(echo "$N" | OMP_NUM_THREADS="$p" "$BIN" 2>/dev/null | grep "Tiempo total" | grep -oE '[0-9]+\.[0-9]+')
+  echo "hilos: $p"
+  for rep in $(seq "$REPS"); do
+    t=$(echo "$N" | OMP_NUM_THREADS="$p" "$BIN_OMP" 2>/dev/null | grep "Tiempo total" | grep -oE '[0-9]+\.[0-9]+')
+    printf "  corrida %-2d %s s\n" "$rep" "$t"
     if [ -z "$best" ]; then best=$t; else best=$(python3 -c "print(min($best,$t))"); fi
   done
   T[$p]=$best
-  printf "%-6d %s\n" "$p" "$best"
+  printf "  mejor: %s s\n" "$best"
 done
 
 echo ""
-printf "%-6s %-12s %-10s %-12s\n" "hilos" "total(s)" "speedup" "eficiencia(%)"
-T1=${T[1]}
+echo "=== COMPARACION: SPEEDUP = Ts/Tp ==="
+printf "%-12s %-12s %-10s %-14s\n" "version" "tiempo(s)" "speedup" "eficiencia(%)"
+printf "%-12s %-12.6f %-10.2f %-14s\n" "secuencial" "$best_seq" 1 "-"
 for p in "${HILOS[@]}"; do
-  python3 -c "s=$T1/${T[$p]}; print('%-6d %-12.5f %-10.2f %-12.1f' % ($p, ${T[$p]}, s, 100*s/$p))"
+  python3 -c "s=$best_seq/${T[$p]}; print('%-12s %-12.6f %-10.2f %-14.1f' % ('OpenMP-$p', ${T[$p]}, s, 100*s/$p))"
 done

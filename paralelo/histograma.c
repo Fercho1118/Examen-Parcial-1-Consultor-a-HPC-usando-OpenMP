@@ -265,7 +265,8 @@ void HistogramaParalelo() {
 
 int main() {
 
-    srand(time(NULL));
+    /* Misma semilla que la version secuencial para una comparacion justa. */
+    srand(12345);
 
     printf("Cantidad de temperaturas: ");
     scanf("%d", &N);

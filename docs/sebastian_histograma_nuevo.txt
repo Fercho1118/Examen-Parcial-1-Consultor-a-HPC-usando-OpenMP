@@ -1,0 +1,55 @@
+=== HISTOGRAMA + MERGE SORT: SECUENCIAL ===
+corrida 1  0.082466 s
+corrida 2  0.098211 s
+corrida 3  0.085187 s
+corrida 4  0.090631 s
+corrida 5  0.092670 s
+corrida 6  0.089121 s
+corrida 7  0.089453 s
+mejor secuencial: 0.082466 s
+
+=== HISTOGRAMA + MERGE SORT: PARALELO OPENMP ===
+hilos: 1
+  corrida 1  0.096826 s
+  corrida 2  0.087320 s
+  corrida 3  0.088537 s
+  corrida 4  0.089745 s
+  corrida 5  0.208892 s
+  corrida 6  0.091037 s
+  corrida 7  0.091414 s
+  mejor: 0.08732 s
+hilos: 2
+  corrida 1  0.048564 s
+  corrida 2  0.056576 s
+  corrida 3  0.049836 s
+  corrida 4  0.054157 s
+  corrida 5  0.053655 s
+  corrida 6  0.050592 s
+  corrida 7  0.048403 s
+  mejor: 0.048403 s
+hilos: 4
+  corrida 1  0.038163 s
+  corrida 2  0.040550 s
+  corrida 3  0.035066 s
+  corrida 4  0.040356 s
+  corrida 5  0.038338 s
+  corrida 6  0.038581 s
+  corrida 7  0.034955 s
+  mejor: 0.034955 s
+hilos: 8
+  corrida 1  0.028782 s
+  corrida 2  0.034105 s
+  corrida 3  0.035381 s
+  corrida 4  0.028499 s
+  corrida 5  0.028158 s
+  corrida 6  0.032319 s
+  corrida 7  0.030491 s
+  mejor: 0.028158 s
+
+=== COMPARACION: SPEEDUP = Ts/Tp ===
+version      tiempo(s)    speedup    eficiencia(%) 
+secuencial   0.082466     1.00       -             
+OpenMP-1     0.087320     0.94       94.4          
+OpenMP-2     0.048403     1.70       85.2          
+OpenMP-4     0.034955     2.36       59.0          
+OpenMP-8     0.028158     2.93       36.6          

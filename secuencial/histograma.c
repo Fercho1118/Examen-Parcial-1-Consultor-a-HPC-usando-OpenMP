@@ -126,7 +126,8 @@ void Histograma() {
 
 int main() {
 
-    srand(time(NULL));
+    /* Semilla fija para comparar exactamente los mismos datos. */
+    srand(12345);
 
     printf("Cantidad de temperaturas: ");
     scanf("%d", &N);

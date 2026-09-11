@@ -1,0 +1,35 @@
+=== SUMA DE RIEMANN: SECUENCIAL ===
+corrida 1  8.932517 s
+corrida 2  8.565571 s
+corrida 3  8.554320 s
+mejor secuencial: 8.55432 s
+
+=== SUMA DE RIEMANN: PARALELO OPENMP ===
+hilos: 1
+  corrida 1  8.755324 s
+  corrida 2  8.515137 s
+  corrida 3  8.839854 s
+  mejor: 8.515137 s
+hilos: 2
+  corrida 1  5.352216 s
+  corrida 2  5.139801 s
+  corrida 3  5.897038 s
+  mejor: 5.139801 s
+hilos: 4
+  corrida 1  3.948842 s
+  corrida 2  3.465563 s
+  corrida 3  6.156750 s
+  mejor: 3.465563 s
+hilos: 8
+  corrida 1  3.108381 s
+  corrida 2  2.775069 s
+  corrida 3  2.882183 s
+  mejor: 2.775069 s
+
+=== COMPARACION: SPEEDUP = Ts/Tp ===
+version      tiempo(s)    speedup    eficiencia(%) 
+secuencial   8.554320     1.00       -             
+OpenMP-1     8.515137     1.00       100.5         
+OpenMP-2     5.139801     1.66       83.2          
+OpenMP-4     3.465563     2.47       61.7          
+OpenMP-8     2.775069     3.08       38.5          
